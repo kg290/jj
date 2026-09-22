@@ -100,6 +100,7 @@ use crate::merge_tools::invoke_external_diff;
 use crate::merge_tools::new_utf8_temp_dir;
 use crate::source_symbol::SourceLanguage;
 use crate::source_symbol::SourceSymbolScanner;
+use crate::source_symbol::source_symbol_from_line;
 use crate::templater::TemplateRenderer;
 use crate::text_util;
 use crate::ui::Ui;
@@ -1075,14 +1076,13 @@ fn show_color_words_resolved_hunks(
 /// Prints `num_after` lines, ellipsis, and `num_before` lines.
 fn show_color_words_context_lines(
     formatter: &mut dyn Formatter,
-    _language: Option<SourceLanguage>,
+    language: Option<SourceLanguage>,
     contexts: &[Diff<&BStr>],
     mut line_number: DiffLineNumber,
     labels: Diff<&str>,
     options: &ColorWordsDiffOptions,
     (num_after, num_before): (usize, usize),
 ) -> io::Result<DiffLineNumber> {
-    const SKIPPED_CONTEXT_LINE: &str = "    ...\n";
     let extract = |after: bool| -> (Vec<&[u8]>, Vec<&[u8]>, u32) {
         let mut lines = contexts
             .iter()
@@ -1139,7 +1139,23 @@ fn show_color_words_context_lines(
     let (right_after, mut right_before, num_right_skipped) = extract(true);
     line_number = show(formatter, [&left_after, &right_after], line_number)?;
     if num_left_skipped > 0 || num_right_skipped > 0 {
-        write!(formatter, "{SKIPPED_CONTEXT_LINE}")?;
+        write!(formatter, "    ...")?;
+        if let Some(lang) = language {
+            // Show the last symbol line as a context of the skipped range.
+            let mut lines = contexts
+                .iter()
+                .flat_map(|contents| contents.after.split_inclusive(|b| *b == b'\n'))
+                .fuse();
+            lines.by_ref().take(num_after).for_each(drop);
+            lines.by_ref().rev().take(num_before).for_each(drop);
+            if let Some(line) = lines.rfind(|line| source_symbol_from_line(lang, line).is_some()) {
+                write!(formatter, "    ")?;
+                formatter
+                    .labeled("context")
+                    .write_all(line.trim_ascii_end())?;
+            }
+        }
+        writeln!(formatter)?;
         line_number.left += num_left_skipped;
         line_number.right += num_right_skipped;
         if left_before.len() > num_before {
