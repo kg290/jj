@@ -45,8 +45,9 @@ run = "cargo build"
 
 [tasks."build:docs"]
 description = "Build documentation into rendered-docs/ for offline use"
-tools.uv = "{{vars.uv_version}}"
-run = "uv run mkdocs build"
+tools.node = "{{vars.node_version}}"
+run = "npm install && npm run build"
+dir = "web/docs"
 
 [tasks."build:web"]
 description = "Build the new astro-based documentation"
@@ -129,11 +130,6 @@ run = "cargo insta test --accept --workspace --test-runner nextest --"
 
 [tasks."serve:docs"]
 description = "Preview documentation with live reloading"
-tools.uv = "{{vars.uv_version}}"
-run = "uv run mkdocs serve"
-
-[tasks."serve:web"]
-description = "Preview the new astro-based documentation with live reloading"
 tools.node = "{{vars.node_version}}"
 run = "npm install && npm run dev"
 dir = "web/docs"
