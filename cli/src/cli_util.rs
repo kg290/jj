@@ -970,6 +970,7 @@ impl WorkspaceCommandEnvironment {
         let path_converter = RepoPathUiConverter::Fs {
             cwd: command.cwd().to_owned(),
             base: workspace.workspace_root().to_owned(),
+            repo_path: workspace.repo_path().to_owned(),
         };
         #[cfg(feature = "git")]
         let working_copy_shared_with_git = crate::git_util::is_colocated_git_workspace(workspace)?;
@@ -998,12 +999,20 @@ impl WorkspaceCommandEnvironment {
     }
 
     pub(crate) fn cwd(&self) -> &Path {
-        let RepoPathUiConverter::Fs { cwd, base: _ } = &self.path_converter;
+        let RepoPathUiConverter::Fs {
+            cwd,
+            base: _,
+            repo_path: _,
+        } = &self.path_converter;
         cwd
     }
 
     pub fn workspace_root(&self) -> &Path {
-        let RepoPathUiConverter::Fs { cwd: _, base } = &self.path_converter;
+        let RepoPathUiConverter::Fs {
+            cwd: _,
+            base,
+            repo_path: _,
+        } = &self.path_converter;
         base
     }
 
@@ -1043,6 +1052,7 @@ impl WorkspaceCommandEnvironment {
             LazyLock::new(|| RepoPathUiConverter::Fs {
                 cwd: PathBuf::new(),
                 base: PathBuf::new(),
+                repo_path: PathBuf::new(),
             });
         FilesetParseContext {
             aliases_map: &self.fileset_aliases_map,
